@@ -366,7 +366,7 @@ def listar_fatos(militar_id=None, pelotao_id=None):
   cursor = conn.cursor()
 
   query = """
-        SELECT f.id, f.tipo, f.descricao, f.data_registro, m.posto_graduacao, m.qra, p.nome, u.nome
+        SELECT f.id, f.tipo, f.descricao, f.data_registro, m.posto_graduacao, m.qra, p.nome, u.nome, f.usuario_id
         FROM fatos_observados f
         JOIN militares m ON f.militar_id = m.id
         JOIN pelotoes p ON m.pelotao_id = p.id
@@ -826,17 +826,20 @@ def tela_consultar_fatos():
 
       st.markdown("### 📋 Registros Encontrados")
 
+      usuario_atual = st.session_state["usuario"]
+
       for f in fatos:
-        fato_id, tipo, desc, data, posto, qra, pel_nome, autor = (
-            f[0],
-            f[1],
-            f[2],
-            f[3],
-            f[4],
-            f[5],
-            f[6],
-            f[7],
-        )
+        (
+            fato_id,
+            tipo,
+            desc,
+            data,
+            posto,
+            qra,
+            pel_nome,
+            autor,
+            autor_id,
+        ) = f
         data_fmt = data.split()[0] if " " in data else data
 
         with st.expander(
@@ -847,14 +850,21 @@ def tela_consultar_fatos():
           st.markdown(f"**Data:** {data}")
           st.markdown(f"**Descrição:**\n>{desc}")
 
-          st.divider()
-          if st.button("🗑️ Excluir Fato", key=f"del_fato_{fato_id}"):
-            sucesso, msg = deletar_fato(fato_id)
-            if sucesso:
-              st.success(msg)
-              st.rerun()
-            else:
-              st.error(msg)
+          # Regra de exclusão: Apenas o Admin ou o próprio autor do registro podem excluir
+          if (
+              usuario_atual["perfil"] == "administrador"
+              or usuario_atual["id"] == autor_id
+          ):
+            st.divider()
+            if st.button(
+                "🗑️ Excluir Fato", key=f"del_fato_{fato_id}", type="secondary"
+            ):
+              sucesso, msg = deletar_fato(fato_id)
+              if sucesso:
+                st.success(msg)
+                st.rerun()
+              else:
+                st.error(msg)
     else:
       st.info("Nenhum fato observado encontrado para os filtros selecionados.")
 
@@ -1063,7 +1073,6 @@ else:
   elif pagina == "trocar_senha":
     tela_trocar_senha()
   elif pagina == "gerenciar_senhas":
-    # Proteção extra de rota para o admin
     if st.session_state["usuario"]["perfil"] == "administrador":
       tela_gerenciar_senhas()
     else:
