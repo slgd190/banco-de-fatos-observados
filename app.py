@@ -1,6 +1,5 @@
 import hashlib
-from pathlib import Path
-import sqlite3
+import psycopg2
 import streamlit as st
 
 # ============================================================
@@ -13,7 +12,6 @@ st.set_page_config(
     layout="centered",
 )
 
-DB_PATH = Path("consta_que.db")
 
 
 # ============================================================
@@ -22,7 +20,7 @@ DB_PATH = Path("consta_que.db")
 
 
 def conectar_banco():
-  return sqlite3.connect(DB_PATH)
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
 
 
 def criar_banco():
